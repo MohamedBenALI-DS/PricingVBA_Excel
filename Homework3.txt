@@ -1,0 +1,181 @@
+Function MC1a(K As Double, S0 As Double, r As Double, sigma As Double, T As Double, n As Long) As Double:
+
+    Dim payoff As Double
+    Dim i As Long
+    Dim epsilon As Double
+    Dim S As Double
+    
+    
+    payoff = 0
+    For i = 1 To n
+        epsilon = WorksheetFunction.NormSInv(Rnd())
+        S = S0 * Exp((r - (sigma * sigma) / 2) * T + sigma * epsilon * Sqr(T))
+        payoff = payoff + WorksheetFunction.Max(0, S - K) + K
+        
+    Next i
+    
+    MC1a = Exp(-r * T) * (payoff / n)
+
+End Function
+Function CF1b(K As Double, S0 As Double, r As Double, sigma As Double, T As Double) As Double:
+    
+    Dim d1 As Double
+    Dim d2 As Double
+    Dim c As Double
+    
+    d1 = (Log(S0 / K) + (r + (sigma * sigma) / 2) * T) / (sigma * Sqr(T))
+    d2 = d1 - sigma * Sqr(T)
+    c = S0 * WorksheetFunction.NormSDist(d1) - K * Exp(-r * T) * WorksheetFunction.NormSDist(d2)
+    
+    CF1b = (K) * Exp(-r * T) + c
+
+End Function
+
+Function CF2a(K As Double, S0 As Double, r As Double, sigma As Double, T As Double) As Double:
+    
+    Dim d1 As Double
+    Dim d2 As Double
+    Dim S As Double
+    
+    d1 = (Log(S0 / K) + (r + (sigma * sigma) / 2) * T) / (sigma * Sqr(T))
+    d2 = d1 - sigma * Sqr(T)
+    
+    
+    CF2a = Exp(-r * T) * 100 * (1 - WorksheetFunction.NormSDist(d2))
+
+
+End Function
+
+Function MC2b(K As Double, S0 As Double, r As Double, sigma As Double, T As Double, n As Long) As Double:
+
+    Dim payoff As Double
+    Dim i As Long
+    Dim epsilon As Double
+    Dim S As Double
+    
+    
+    For i = 1 To n
+        epsilon = WorksheetFunction.NormSInv(Rnd())
+        S = S0 * Exp((r - (sigma * sigma) / 2) * T + sigma * epsilon * Sqr(T))
+        
+        If K > S Then
+            payoff = payoff + 100
+        End If
+    Next i
+    
+    MC2b = (payoff / n) * Exp(-r * T)
+    
+End Function
+Function MC3a(K As Double, S01 As Double, S02 As Double, S03 As Double, sigma1 As Double, sigma2 As Double, sigma3 As Double, rho12 As Double, rho13 As Double, rho23 As Double, r As Double, T As Double, n As Long) As Double:
+
+    Dim payoff As Double
+    Dim i As Long
+    Dim epsilon1 As Double
+    Dim epsilon2 As Double
+    Dim epsilon3 As Double
+    Dim S1 As Double
+    Dim S2 As Double
+    Dim S3 As Double
+
+    
+    payoff = 0
+    For i = 1 To n
+        epsilon1 = WorksheetFunction.NormSInv(Rnd())
+        epsilon2 = rho12 * epsilon1 + Sqr(1 - rho12 ^ 2) * WorksheetFunction.NormSInv(Rnd())
+        epsilon3 = rho13 * epsilon1 + rho23 * epsilon2 + Sqr(1 - rho13 ^ 2 - rho23 ^ 2 - 2 * rho13 * rho23) * WorksheetFunction.NormSInv(Rnd())
+        
+        S1 = S01 * Exp((r - (sigma1 * sigma1) / 2) * T + sigma1 * epsilon1 * Sqr(T))
+        S2 = S02 * Exp((r - (sigma2 * sigma2) / 2) * T + sigma2 * epsilon2 * Sqr(T))
+        S3 = S03 * Exp((r - (sigma3 * sigma3) / 2) * T + sigma3 * epsilon3 * Sqr(T))
+        
+        payoff = payoff + WorksheetFunction.Max(0, S1 / S01 - S2 / S02)
+        
+    Next i
+    
+    MC3a = Exp(-r * T) * (payoff / n)
+
+End Function
+
+Function MC3b(K As Double, S01 As Double, S02 As Double, S03 As Double, sigma1 As Double, sigma2 As Double, sigma3 As Double, rho12 As Double, rho13 As Double, rho23 As Double, r As Double, T As Double, n As Long) As Double:
+
+    Dim payoff As Double
+    Dim i As Long
+    Dim epsilon1 As Double
+    Dim epsilon2 As Double
+    Dim epsilon3 As Double
+    Dim S1 As Double
+    Dim S2 As Double
+    Dim S3 As Double
+
+    
+    payoff = 0
+    For i = 1 To n
+        epsilon1 = WorksheetFunction.NormSInv(Rnd())
+        epsilon2 = rho12 * epsilon1 + Sqr(1 - rho12 ^ 2) * WorksheetFunction.NormSInv(Rnd())
+        epsilon3 = rho13 * epsilon1 + rho23 * epsilon2 + Sqr(1 - rho13 ^ 2 - rho23 ^ 2 - 2 * rho13 * rho23) * WorksheetFunction.NormSInv(Rnd())
+        
+        S1 = S01 * Exp((r - (sigma1 * sigma1) / 2) * T + sigma1 * epsilon1 * Sqr(T))
+        S2 = S02 * Exp((r - (sigma2 * sigma2) / 2) * T + sigma2 * epsilon2 * Sqr(T))
+        S3 = S03 * Exp((r - (sigma3 * sigma3) / 2) * T + sigma3 * epsilon3 * Sqr(T))
+        
+        payoff = payoff + WorksheetFunction.Max(S1, S2, S3)
+        
+    Next i
+    
+    MC3b = Exp(-r * T) * (payoff / n)
+
+End Function
+
+Sub Main()
+    Dim X1a As Double
+    Dim X1b As Double
+    Dim K As Double
+    Dim S0 As Double
+    Dim S01 As Double
+    Dim S02 As Double
+    Dim S03 As Double
+    Dim rho12 As Double
+    Dim rho23 As Double
+    Dim rho13 As Double
+    Dim sigma1 As Double
+    Dim sigma2 As Double
+    Dim sigma3 As Double
+    Dim r As Double
+    Dim sigma As Double
+    Dim T As Double
+    Dim n As Long
+    Dim N_Q3 As Long
+    
+    K = InputBox("K=")
+    T = InputBox("T=")
+    r = InputBox("r=")
+    S0 = InputBox("S0=")
+    sigma = InputBox("sigma=")
+    n = InputBox("n=")
+    S01 = InputBox("S01=")
+    S02 = InputBox("S02=")
+    S03 = InputBox("S03=")
+    rho12 = InputBox("rho12=")
+    rho23 = InputBox("rho23=")
+    rho13 = InputBox("rho13=")
+    N_Q3 = InputBox("N=")
+    sigma1 = InputBox("sigma1=")
+    sigma2 = InputBox("sigma2=")
+    sigma3 = InputBox("sigma3=")
+    
+    X1a = MC1a(K, S0, r, sigma, T, n)
+    X1b = CF1b(K, S0, r, sigma, T)
+    X2a = CF2a(K, S0, r, sigma, T)
+    X2b = MC2b(K, S0, r, sigma, T, n)
+    X3a = MC3a(K, S01, S02, S03, sigma1, sigma2, sigma3, rho12, rho13, rho23, r, T, N_Q3)
+    X3b = MC3b(K, S01, S02, S03, sigma1, sigma2, sigma3, rho12, rho13, rho23, r, T, N_Q3)
+    
+    
+    MsgBox "Result 1a is = " & X1a
+    MsgBox "Result 1b is = " & X1b
+    MsgBox "Result 2a is = " & X2a
+    MsgBox "Result 2b is = " & X2b
+    MsgBox "Results 3a is= " & X3a
+    MsgBox "Results 3b is= " & X3b
+End Sub
+

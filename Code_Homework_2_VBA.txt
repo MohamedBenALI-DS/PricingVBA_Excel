@@ -1,0 +1,82 @@
+Function N(x As Double, M As Double, sigma As Double) As Double:
+
+    N = WorksheetFunction.Norm_Dist(x, M, sigma, True)
+
+End Function
+
+Function BS(sigma As Double, r As Double, T As Double, S0 As Double, K As Double) As Double:
+
+
+    Dim P As Double
+    Dim d1 As Double
+    Dim d2 As Double
+    
+    d1 = (Log(S0 / K) + (r + sigma * sigma / 2) * T) / (sigma * Sqr(T))
+    d2 = d1 - sigma * Sqr(T)
+    
+    BS = K * Exp(-r * T) * N(-d2, 0, 1) - S0 * N(-d1, 0, 1)
+
+End Function
+
+Function MC(sigma As Double, r As Double, T As Double, S0 As Double, K As Double, n_sum As Integer) As Double:
+    
+    Dim S As Double
+    Dim i As Integer
+    Dim Z As Double
+    Dim payoff As Double
+    Dim j As Double
+    Dim T_years As Double
+    
+    T_years = T
+    
+    payoff = 0
+    
+    For i = 1 To n_sum:
+        
+        S = S0
+        
+        For j = 1 To 100:
+            
+            Z = WorksheetFunction.Norm_Inv(Rnd(), 0, 1)
+            S = S * Exp((r - (sigma * sigma) / 2) * (T_years / 100) + sigma * Z * Sqr(T_years / 100))
+        
+        Next j
+        
+        payoff = payoff + WorksheetFunction.Max(0, K - S)
+        
+    Next i
+         
+    MC = Exp(-r * T_years) * (payoff / n_sum)
+
+End Function
+
+Sub test()
+
+    Dim sigma As Double
+    Dim r As Double
+    Dim S0 As Double
+    Dim K As Double
+    Dim T As Double
+    Dim a As Double
+    Dim b As Double
+    Dim n_sum As Integer
+    
+    
+    
+    sigma = Worksheets("Sheet1").Cells(1, 2).Value
+    r = Worksheets("Sheet1").Cells(2, 2).Value
+    S0 = Worksheets("Sheet1").Cells(3, 2).Value
+    K = Worksheets("Sheet1").Cells(4, 2).Value
+    T = (Worksheets("Sheet1").Cells(5, 2).Value)
+    n_sum = Worksheets("Sheet1").Cells(6, 2).Value
+    
+    
+    a = BS(sigma, r, T, S0, K)
+    MsgBox "le prix du put = " & a
+
+    b = MC(sigma, r, T, S0, K, n_sum)
+    MsgBox "MCMC donne" & b
+    
+
+End Sub
+

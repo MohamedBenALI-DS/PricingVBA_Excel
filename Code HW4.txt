@@ -1,0 +1,241 @@
+Function AsianMC(S0 As Double, sigma As Double, K As Double, r As Double, T1 As Double, T2 As Double, n As Long) As Variant
+
+    Dim i As Long
+    Dim payoff As Double
+    Dim S1 As Double
+    Dim S2 As Double
+    Dim epsilon As Double
+    Dim payoff_list() As Double
+    ReDim payoff_list(1 To n)
+    Dim Result(1 To 2) As Double
+    Dim X As Double
+    Dim Stat_Error As Double
+    
+    payoff = 0
+    
+    For i = 1 To n
+        epsilon = WorksheetFunction.NormSInv(Rnd())
+        S1 = S0 * Exp((r - sigma * sigma / 2) * T1 + sigma * epsilon * Sqr(T1))
+        S2 = S1 * Exp((r - sigma * sigma / 2) * (T2 - T1) + sigma * epsilon * Sqr((T2 - T1)))
+        
+        payoff_list(i) = WorksheetFunction.Max(0, ((S2 + S1) / 2) - K)
+        payoff = payoff + payoff_list(i)
+        
+    Next i
+    
+    X = Exp(-r * T2) * (payoff / n)
+    
+    Stat_Error = 0
+    
+    For i = 1 To n
+    
+        Stat_Error = Stat_Error + (payoff_list(i) * Exp(-r * T2) - X) * (payoff_list(i) * Exp(-r * T2) - X)
+    
+    Next i
+    Stat_Error = Sqr(Stat_Error / (n - 1)) / Sqr(n)
+    
+    Result(1) = X
+    Result(2) = Stat_Error
+    
+    AsianMC = Result
+
+End Function
+Function MCdelta(S0 As Double, sigma As Double, K As Double, r As Double, T1 As Double, T2 As Double, n As Long) As Double
+
+    Dim S1 As Double
+    Dim S2 As Double
+    Dim h As Double
+    Dim Delta As Double
+    Dim pcall1, pcall2 As Double
+    Dim Pcall_Asian1, Pcall_Asian2 As Variant
+    
+    h = WorksheetFunction.NormSInv(Rnd())
+    S1 = S0 + h
+    S2 = S0 - h
+    Pcall_Asian1 = AsianMC(S1, sigma, K, r, T1, T2, n)
+    pcall1 = Pcall_Asian1(1)
+    Pcall_Asian2 = AsianMC(S2, sigma, K, r, T1, T2, n)
+    pcall2 = Pcall_Asian2(1)
+    
+    Delta = (pcall1 - pcall2) / (2 * h)
+    
+    MCdelta = Delta
+
+
+End Function
+Function EuropeanPutBS(S0 As Double, sigma As Double, K As Double, r As Double, T As Double) As Double
+    
+    Dim d1, d2 As Double
+    
+    d1 = (Log(S0 / K) + (r + (sigma ^ 2) / 2)) / (sigma * Sqr(T))
+    d2 = d1 - sigma * Sqr(T)
+    EuropeanPutBS = -S0 * WorksheetFunction.NormSDist(-d1) + K * Exp(-r * T) * WorksheetFunction.NormSDist(-d2)
+
+
+End Function
+
+Function EuropeanPutBT(S0 As Double, u As Double, d As Double, p As Double, dt As Double, sigma As Double, K As Double, r As Double, T As Double, n As Long) As Double
+    
+    Dim i, j As Integer
+    Dim S As Double
+    Dim payoff As Double
+    Dim P_put As Double
+    Dim payoff_list() As Double
+    ReDim payoff_list(1 To n + 1)
+    
+    
+    dt = T / n
+    
+    For i = 1 To n + 1
+        S = S0 * (u ^ (i)) * (d ^ (n - (i)))
+        payoff = WorksheetFunction.Max(0, K - S)
+        payoff_list(i) = payoff
+    Next i
+    
+    For i = n - 1 To 1 Step -1
+        For j = 1 To i + 1
+        
+            payoff_list(j) = Exp(-r * dt) * (p * payoff_list(j + 1) + (1 - p) * payoff_list(j))
+            
+        Next j
+        
+    Next i
+    
+    P_put = payoff_list(1)
+    
+    EuropeanPutBT = P_put
+    
+
+End Function
+Sub DrawComparisonGraph()
+    Dim S0 As Double, sigma As Double, K As Double, r As Double, T As Double
+    Dim n As Long, i As Long
+    Dim u As Double, d As Double, p As Double, dt As Double
+    Dim u_c As Double, d_c As Double, p_c As Double
+    Dim P_BS As Double, P_BT As Double, P_BT_c As Double
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+
+    S0 = 100
+    sigma = 0.4
+    r = 0.05
+    K = 105
+    T = 0.5
+
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    Worksheets("ComparisonGraph").Delete
+    Application.DisplayAlerts = True
+    On Error GoTo 0
+
+    Set ws = ThisWorkbook.Worksheets.Add
+    ws.Name = "ComparisonGraph"
+
+    ws.Range("A1").Value = "n"
+    ws.Range("B1").Value = "Black-Scholes"
+    ws.Range("C1").Value = "Binomial Tree"
+    ws.Range("D1").Value = "Adjusted Binomial Tree"
+
+    For n = 20 To 100
+        dt = T / n
+        u = Exp(sigma * Sqr(dt))
+        d = 1 / u
+        p = (Exp(r * dt) - d) / (u - d)
+
+        P_BS = EuropeanPutBS(S0, sigma, K, r, T)
+
+        P_BT = EuropeanPutBT(S0, u, d, p, dt, sigma, K, r, T, n)
+
+        u_c = Exp((r - (sigma * sigma) / 2) * dt + sigma * Sqr(dt))
+        d_c = Exp((r - (sigma * sigma) / 2) * dt - sigma * Sqr(dt))
+        p_c = 0.5
+
+        P_BT_c = EuropeanPutBT(S0, u_c, d_c, p_c, dt, sigma, K, r, T, n)
+
+        ws.Cells(n - 18, 1).Value = n
+        ws.Cells(n - 18, 2).Value = P_BS
+        ws.Cells(n - 18, 3).Value = P_BT
+        ws.Cells(n - 18, 4).Value = P_BT_c
+    Next n
+
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Top:=50, Width:=500, Height:=300)
+    With chartObj.Chart
+        .ChartType = xlLine
+        .SetSourceData Source:=ws.Range("A1:D82") ' Data range
+
+        .HasTitle = True
+        .ChartTitle.Text = "European Put Prices: Black-Scholes vs Binomial Trees"
+        .Axes(xlCategory, xlPrimary).HasTitle = True
+        .Axes(xlCategory, xlPrimary).AxisTitle.Text = "Number of Steps (n)"
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Text = "Option Price"
+
+        .HasLegend = True
+        .Legend.Position = xlLegendPositionBottom
+    End With
+
+    MsgBox "Graph Created Successfully!", vbInformation
+End Sub
+
+
+Sub main()
+
+    Dim S0 As Double
+    Dim sigma As Double
+    Dim K As Double
+    Dim r As Double
+    Dim T1 As Double
+    Dim T2 As Double
+    Dim n As Long
+    Dim Res As Variant
+    Dim Delta As Double
+    Dim T As Double
+    Dim P_put, P_putBT, P_putBT_c As Double
+    Dim n2 As Long
+    Dim u As Double
+    Dim d As Double
+    Dim p As Double
+    Dim p_c As Double
+    Dim d_c As Double
+    Dim u_c As Double
+    Dim dt As Double
+    
+
+    S0 = InputBox("S0=")
+    sigma = InputBox("Sigma =")
+    r = InputBox("Interest Rate =")
+    K = InputBox("K =")
+    T1 = InputBox("T1 =")
+    T2 = InputBox("T2 =")
+    n = InputBox("N =")
+    T = InputBox("T for put pricing = ")
+    n2 = InputBox("Number of leaf")
+    
+    Res = AsianMC(S0, sigma, K, r, T1, T2, n)
+    Delta = MCdelta(S0, sigma, K, r, T1, T2, n)
+    MsgBox " The Asian Call price = " & Res(1)
+    MsgBox " The stat error is = " & Res(2)
+    MsgBox " Delta is =" & Delta
+    
+    dt = T / n2
+    u = Exp(sigma * Sqr(dt))
+    d = 1 / u
+    p = (Exp(r * dt) - d) / (u - d)
+       
+    
+    P_put = EuropeanPutBS(S0, sigma, K, r, T)
+    P_putBT = EuropeanPutBT(S0, u, d, p, dt, sigma, K, r, T, n2)
+        
+    MsgBox "Put price with BS = " & P_put
+    MsgBox "Put price with Binomial Tree =" & P_putBT
+
+    u_c = Exp((r - (sigma * sigma) / 2) * dt + sigma * Sqr(dt))
+    d_c = Exp((r - (sigma * sigma) / 2) * dt - sigma * Sqr(dt))
+    p_c = 1 / 2
+    
+    
+    P_putBT_c = EuropeanPutBT(S0, u_c, d_c, p_c, dt, sigma, K, r, T, n2)
+
+    MsgBox "Put price with Binomial Tree =" & P_putBT_c
+
+End Sub
